@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Records Portal - Request TOR & Transfer</title>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+  .header {
+    width: 100%;
+    max-width: 900px;
+    background: #fff;
+    border-radius: 12px 12px 0 0;
+    padding: 15px 25px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .header img {
+    height: 70px;
+    width: auto;
+    object-fit: contain;
+  }
+  .header-text h1 {
+    color: #1e3a8a;
+    font-size: 22px;
+    margin-bottom: 4px;
+  }
+  .header-text p {
+    color: #64748b;
+    font-size: 13px;
+  }
+  .container {
+    width: 100%;
+    max-width: 900px;
+    background: #fff;
+    border-radius: 0 0 12px 12px;
+    padding: 30px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  }
+  .hidden { display: none !important; }
+  h2 {
+    color: #1e3a8a;
+    margin-bottom: 20px;
+    font-size: 20px;
+    border-bottom: 2px solid #3b82f6;
+    padding-bottom: 8px;
+  }
+  .form-group {
+    margin-bottom: 16px;
+  }
+  label {
+    display: block;
+    margin-bottom: 6px;
+    color: #334155;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  input, select, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+  }
+  textarea { resize: vertical; min-height: 80px; }
+  button {
+    background: #1e3a8a;
+    color: #fff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  button:hover { background: #1e40af; }
+  button:disabled { background: #94a3b8; cursor: not-allowed; }
+  .btn-secondary {
+    background: #64748b;
+    margin-left: 10px;
+  }
+  .btn-secondary:hover { background: #475569; }
+  .btn-logout {
+    background: #dc2626;
+    padding: 8px 16px;
+    font-size: 13px;
+    margin-left: auto;
+  }
+  .btn-logout:hover { background: #b91c1c; }
+  .tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  .tab {
+    padding: 12px 24px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #64748b;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 15px;
+    margin-bottom: -2px;
+  }
+  .tab.active {
+    color: #1e3a8a;
+    border-bottom-color: #3b82f6;
+    background: transparent;
+  }
+  .tab:hover { color: #1e3a8a; background: transparent; }
+  .message {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    font-size: 14px;
+  }
+  .message.error { background: #fee2e2; color: #991b1b; border-left: 4px solid #dc2626; }
+  .message.success { background: #dcfce7; color: #166534; border-left: 4px solid #16a34a; }
+  .message.info { background: #dbeafe; color: #1e40af; border-left: 4px solid #3b82f6; }
+  .user-badge {
+    background: #dbeafe;
+    color: #1e3a8a;
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .requests-list {
+    margin-top: 30px;
+  }
+  .request-item {
+    background: #f8fafc;
+    border-left: 4px solid #3b82f6;
+    padding: 14px 18px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .request-info strong { color: #1e3a8a; display: block; margin-bottom: 4px; }
+  .request-info small { color: #64748b; }
+  .status {
+    padding: 5px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .status.pending { background: #fef3c7; color: #92400e; }
+  .status.approved { background: #dcfce7; color: #166534; }
+  .status.rejected { background: #fee2e2; color: #991b1b; }
+  .loading { text-align: center; padding: 40px; color: #64748b; }
+  .login-box {
+    max-width: 420px;
+    margin: 60px auto;
+  }
+  .login-box h2 { text-align: center; }
+  .row {
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+  }
+  .row .form-group { flex: 1; }
+  .info-note {
+    background: #f1f5f9;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #475569;
+    margin-bottom: 18px;
+    border-left: 3px solid #3b82f6;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <img src="logo.jpg" alt="School Logo" id="schoolLogo">
+  <div class="header-text">
+    <h1>Student Records Portal</h1>
+    <p>Transcript of Records &amp; Transfer School Requests</p>
+  </div>
+  <button class="btn-logout hidden" id="logoutBtn">Logout</button>
+</div>
+
+<div class="container">
+
+  <!-- LOGIN SECTION -->
+  <div id="loginSection" class="login-box">
+    <h2>Sign In</h2>
+    <div id="loginMessage"></div>
+    <div class="form-group">
+      <label for="loginEmail">Email Address</label>
+      <input type="email" id="loginEmail" placeholder="student@school.edu">
+    </div>
+    <div class="form-group">
+      <label for="loginPassword">Password</label>
+      <input type="password" id="loginPassword" placeholder="Enter password">
+    </div>
+    <button id="loginBtn" style="width:100%;">Sign In</button>
+    <div class="info-note" style="margin-top:20px;">
+      <strong>Note:</strong> Use the account issued by the registrar's office. If you don't have one, contact the registrar.
+    </div>
+  </div>
+
+  <!-- MAIN APP SECTION -->
+  <div id="appSection" class="hidden">
+    <div style="display:flex; align-items:center; margin-bottom:20px; gap:15px;">
+      <span class="user-badge" id="userBadge"></span>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="tor">Request TOR</button>
+      <button class="tab" data-tab="transfer">Request to Transfer School</button>
+      <button class="tab" data-tab="myrequests">My Requests</button>
+    </div>
+
+    <!-- TOR FORM -->
+    <div id="torTab">
+      <h2>Request Transcript of Records (TOR)</h2>
+      <div id="torMessage"></div>
+      <div class="info-note">
+        Fill out all fields accurately. Your request will be reviewed by the registrar's office.
+      </div>
+      <div class="form-group">
+        <label for="torStudentId">Student ID Number *</label>
+        <input type="text" id="torStudentId" placeholder="e.g. 2024-00123">
+      </div>
+      <div class="form-group">
+        <label for="torFullName">Full Name *</label>
+        <input type="text" id="torFullName" placeholder="Juan Dela Cruz">
+      </div>
+      <div class="form-group">
+        <label for="torCourse">Course / Program *</label>
+        <input type="text" id="torCourse" placeholder="BS Computer Science">
+      </div>
+      <div class="row">
+        <div class="form-group">
+          <label for="torYearLevel">Year Level *</label>
+          <select id="torYearLevel">
+            <option value="">Select...</option>
+            <option>1st Year</option>
+            <option>2nd Year</option>
+            <option>3rd Year</option>
+            <option>4th Year</option>
+            <option>5th Year</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="torCopies">Number of Copies *</label>
+          <input type="number" id="torCopies" value="1" min="1" max="10">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="torPurpose">Purpose of Request *</label>
+        <textarea id="torPurpose" placeholder="e.g. Employment application, further studies, board exam..."></textarea>
+      </div>
+      <div class="form-group">
+        <label for="torContact">Contact Number *</label>
+        <input type="tel" id="torContact" placeholder="09XX-XXX-XXXX">
+      </div>
+      <button id="submitTorBtn">Submit TOR Request</button>
+    </div>
+
+    <!-- TRANSFER FORM -->
+    <div id="transferTab" class="hidden">
+      <h2>Request to Transfer School</h2>
+      <div id="transferMessage"></div>
+      <div class="info-note">
+        Submit this form to request permission and documents needed for transferring to another school.
+      </div>
+      <div class="form-group">
+        <label for="trStudentId">Student ID Number *</label>
+        <input type="text" id="trStudentId" placeholder="e.g. 2024-00123">
+      </div>
+      <div class="form-group">
+        <label for="trFullName">Full Name *</label>
+        <input type="text" id="trFullName" placeholder="Juan Dela Cruz">
+      </div>
+      <div class="form-group">
+        <label for="trCurrentCourse">Current Course / Program *</label>
+        <input type="text" id="trCurrentCourse" placeholder="BS Computer Science">
+      </div>
+      <div class="form-group">
+        <label for="trYearLevel">Year Level *</label>
+        <select id="trYearLevel">
+          <option value="">Select...</option>
+          <option>1st Year</option>
+          <option>2nd Year</option>
+          <option>3rd Year</option>
+          <option>4th Year</option>
+          <option>5th Year</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="trDestSchool">Destination School *</label>
+        <input type="text" id="trDestSchool" placeholder="Name of school you want to transfer to">
+      </div>
+      <div class="form-group">
+        <label for="trDestCourse">Intended Course at Destination School *</label>
+        <input type="text" id="trDestCourse" placeholder="e.g. BS Information Technology">
+      </div>
+      <div class="form-group">
+        <label for="trReason">Reason for Transfer *</label>
+        <textarea id="trReason" placeholder="Explain the reason for transferring..."></textarea>
+      </div>
+      <div class="form-group">
+        <label for="trContact">Contact Number *</label>
+        <input type="tel" id="trContact" placeholder="09XX-XXX-XXXX">
+      </div>
+      <button id="submitTransferBtn">Submit Transfer Request</button>
+    </div>
+
+    <!-- MY REQUESTS -->
+    <div id="myRequestsTab" class="hidden">
+      <h2>My Requests</h2>
+      <div id="myRequestsMessage"></div>
+      <div class="requests-list" id="myRequestsList">
+        <div class="loading">Loading your requests...</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
